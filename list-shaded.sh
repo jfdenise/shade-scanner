@@ -55,5 +55,7 @@ read -r -a ALLJARS <<< "${allJars}"
         fi
       done
   done
+
 echo "Jars that don't contain Maven metadata:"
-#echo "$notMaven"
+echo "$notMaven"
+
