@@ -1,8 +1,17 @@
 #!/bin/sh
 
-rm -rf shaded-scan-output
-mkdir -p shaded-scan-output
-FILES=$(find modules/ -name \*.jar)
+jbossHome="."
+if [ -n "${1}" ]; then
+  jbossHome="${1}"
+fi
+if [ ! -d "${jbossHome}/modules" ] && [ ! -f "${jbossHome}/jboss-modules.jar" ]; then
+  echo "ERROR, Not a valid server installation"
+  exit 1
+fi
+rm -rf shade-scanner-output
+mkdir -p shade-scanner-output
+echo "Scanned JARS are unzipped in shade-scanner-output directory."
+FILES=$(find ${jbossHome}/modules/ -name \*.jar)
 readarray ARR <<< "${FILES}"
 notMaven=
 allJars=
@@ -11,13 +20,14 @@ declare -A hashmap
 declare -A modulesMap
 for i in "${ARR[@]}"; do
  jarFileName=$(basename "${i}")
- modulesMap["$jarFileName"]="$(echo $i|tr -d '\n')"
- allJars="$allJars $jarFileName"
- if [ ! -d "shaded-scan-output/${jarFileName}" ]; then
-   mkdir -p "shaded-scan-output/${jarFileName}"
-   unzip $i -d shaded-scan-output/${jarFileName} 2>&1 > /dev/null
-   if [ -d "shaded-scan-output/${jarFileName}/META-INF/maven" ]; then
-     pomFiles=$(find shaded-scan-output/${jarFileName}/META-INF/maven -name pom.xml)
+
+ if [ ! -d "shade-scanner-output/${jarFileName}" ]; then
+   mkdir -p "shade-scanner-output/${jarFileName}"
+   unzip $i -d "shade-scanner-output/${jarFileName}" 2>&1 > /dev/null
+   if [ -d "shade-scanner-output/${jarFileName}/META-INF/maven" ]; then
+     modulesMap["$jarFileName"]="$(echo $i|tr -d '\n')"
+     allJars="$allJars $jarFileName"
+     pomFiles=$(find shade-scanner-output/${jarFileName}/META-INF/maven -name pom.xml)
      readarray pomsArray <<< "${pomFiles}"
      len=${#pomsArray[@]}
      if [ "$len" != "1" ]; then
@@ -27,7 +37,7 @@ for i in "${ARR[@]}"; do
         dir=$(dirname $p)
         props=$dir/pom.properties
         version=`cat $props | grep "version" | cut -d'=' -f2`
-        x="${p#*shaded-scan-output/${jarFileName}/META-INF/maven/}"
+        x="${p#*shade-scanner-output/${jarFileName}/META-INF/maven/}"
         x=$(dirname $x)
         artifactId=$(basename $x)
         if [[ "$jarFileName" != "$artifactId-"* ]]; then
@@ -56,6 +66,6 @@ read -r -a ALLJARS <<< "${allJars}"
       done
   done
 
-echo "Jars that don't contain Maven metadata:"
-echo "$notMaven"
+#echo "Jars that don't contain Maven metadata:"
+#echo "$notMaven"
 
