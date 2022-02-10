@@ -13,6 +13,11 @@ if [ ! -d "${jbossHome}/modules" ] && [ ! -f "${jbossHome}/jboss-modules.jar" ];
 fi
 if [ "$2" == "--transitive" ]; then
   echo "Enabling transitive scanning, will take time to retrieve shaded dependencies artifacts."
+  if [ ! -n "${3}" ]; then
+    echo "A list of remote maven repositories URL must be provided to check transitivity"
+    exit 1
+  fi
+  mavenRepos="${3}"
   enableTransitive="true"
 fi
 rm -rf shade-scanner-output
@@ -54,7 +59,7 @@ for i in "${ARR[@]}"; do
           hashmap["$artifactId-"]="$i[$x:$version]"
           array+=("$x:$version")
           if [ -n "$enableTransitive" ]; then
-            scanTransitive $groupId $artifactId $version
+            scanTransitive $groupId $artifactId $version "$mavenRepos"
           fi
         fi
       done

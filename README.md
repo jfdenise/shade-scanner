@@ -10,7 +10,7 @@ the warning is correct, we are identifying this case based on jar name (so artif
 * The jars that don't contain maven metadata are ignored. We can't determinate any shaded dependencies for these.
 
 Usage:
-* sh ./list-shaded.sh {absolute path to a server installation} [--transitive]
+* sh ./list-shaded.sh {absolute path to a server installation} [--transitive <comma separated list of maven repo URL>] 
 * Scanning for transitives implies download of artifacts from remote repositories, can take some time.
 * Output contains the scan result.
 
@@ -20,6 +20,6 @@ Usage:
 * Output contains the scan result.
 
 Usage:
-* sh ./scan-jar.sh {path to JAR file} [--transitive]
+* sh ./scan-jar.sh {path to JAR file} --transitive <comma separated list of maven repo URL>]
 * Scanning for transitives implies download of artifacts from remote repositories, can take some time.
 * Output contains the scan result.

@@ -14,6 +14,11 @@ fi
 
 if [ "$2" == "--transitive" ]; then
   echo "Enabling transitive scanning, will take time to retrieve shaded dependencies artifacts."
+  if [ ! -n "${3}" ]; then
+    echo "A list of remote maven repositories URL must be provided to check transitivity"
+    exit 1
+  fi
+  mavenRepos="${3}"
   enableTransitive="true"
 fi
 
@@ -29,8 +34,6 @@ if [ -d "shade-scanner-output/${jarFileName}/META-INF/maven" ]; then
  readarray pomsArray <<< "${pomFiles}"
  len=${#pomsArray[@]}
  if [ "$len" != "1" ]; then
-  echo "$jarFileName shades " $(($len - 1)) " artifacts"
-
   for p in "${pomsArray[@]}"; do
     p=$(echo $p|tr -d '\n')
     dir=$(dirname $p)
@@ -44,7 +47,7 @@ if [ -d "shade-scanner-output/${jarFileName}/META-INF/maven" ]; then
       x=${x////:}
       array+=("$x:$version")
       if [ -n "$enableTransitive" ]; then
-        scanTransitive $groupId $artifactId $version
+        scanTransitive $groupId $artifactId $version "$mavenRepos"
       fi
     fi
   done

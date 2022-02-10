@@ -8,6 +8,7 @@ function scanTransitive() {
   local depGroupId="${1}"
   local depArtifactId="${2}"
   local depVersion="${3}"
+  local mavenRepos="${4}"
   echo "Checking if shaded dependency $depGroupId:$depArtifactId:$depVersion shades dependencies"
   mkdir -p shade-scanner-output/transitives/downloads
   local downloadedJarFileName=$depArtifactId-$depVersion.jar
@@ -17,7 +18,7 @@ function scanTransitive() {
     return
   fi
   
-  mvn org.apache.maven.plugins:maven-dependency-plugin:2.4:get -Dtransitive=false -DremoteRepositories=https://maven.repository.redhat.com/ga,https://repository.jboss.org/nexus/content/groups/public-jboss/     -Dartifact="$depGroupId:$depArtifactId:$depVersion:jar"  -Ddest="${downloadedJar}" 2>&1 > /dev/null
+  mvn org.apache.maven.plugins:maven-dependency-plugin:2.4:get -Dtransitive=false -DremoteRepositories=${mavenRepos}     -Dartifact="$depGroupId:$depArtifactId:$depVersion:jar"  -Ddest="${downloadedJar}" 2>&1 > /dev/null
   local retVal=$?
   if [ $retVal -ne 0 ]; then
     echo "ERROR getting transitive dependency $depGroupId:$depArtifactId:$depVersion:jar"
@@ -47,7 +48,7 @@ function scanTransitive() {
           transitiveJarMap["$transitiveartifactId-"]="$transitivegroupId:$transitiveartifactId:$transitiveversion"
           local transitiveString="$transitiveString $transitivex:$transitiveversion"
           echo "WARNING: Found transitive $transitivex:$transitiveversion in $depGroupId:$depArtifactId:$depVersion"
-          scanTransitive $transitivegroupId $transitiveartifactId $transitiveversion
+          scanTransitive $transitivegroupId $transitiveartifactId $transitiveversion "$mavenRepos"
        fi
      done
      transitiveMap["$depGroupId:$depArtifactId:$depVersion"]=$transitiveString
