@@ -1,12 +1,19 @@
 #!/bin/sh
+ source ./common.sh
 
-jbossHome="."
-if [ -n "${1}" ]; then
-  jbossHome="${1}"
+jbossHome="${1}"
+if [ ! -n "${1}" ]; then
+  echo "A path to a server installation must be provided"
+  exit 1
 fi
+jbossHome="${1}"
 if [ ! -d "${jbossHome}/modules" ] && [ ! -f "${jbossHome}/jboss-modules.jar" ]; then
   echo "ERROR, Not a valid server installation"
   exit 1
+fi
+if [ "$2" == "--transitive" ]; then
+  echo "Enabling transitive scanning, will take time to retrieve shaded dependencies artifacts."
+  enableTransitive="true"
 fi
 rm -rf shade-scanner-output
 mkdir -p shade-scanner-output
@@ -31,13 +38,13 @@ for i in "${ARR[@]}"; do
      readarray pomsArray <<< "${pomFiles}"
      len=${#pomsArray[@]}
      if [ "$len" != "1" ]; then
-      echo "$i shades " $(($len - 1)) " artifacts"
       array=()
       for p in "${pomsArray[@]}"; do
         p=$(echo $p|tr -d '\n')
         dir=$(dirname $p)
         props=$dir/pom.properties
         version=`cat $props | grep "version" | cut -d'=' -f2`
+        groupId=`cat $props | grep "groupId" | cut -d'=' -f2`
         x="${p#*shade-scanner-output/${jarFileName}/META-INF/maven/}"
         x=$(dirname $x)
         artifactId=$(basename $x)
@@ -46,8 +53,12 @@ for i in "${ARR[@]}"; do
           x=${x////:}
           hashmap["$artifactId-"]="$i[$x:$version]"
           array+=("$x:$version")
+          if [ -n "$enableTransitive" ]; then
+            scanTransitive $groupId $artifactId $version
+          fi
         fi
       done
+      echo "$i shades " $(($len - 1)) " artifacts"
       sorted=($(for a in "${array[@]}"; do echo "$a"; done | sort))
       for dep in "${sorted[@]}"; do echo "  $dep"; done
      fi
@@ -69,6 +80,5 @@ read -r -a ALLJARS <<< "${allJars}"
       done
   done
 
-#echo "Jars that don't contain Maven metadata:"
-#echo "$notMaven"
+printTransitives
 
