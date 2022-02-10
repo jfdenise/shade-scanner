@@ -71,11 +71,18 @@ done
 # Check for duplicates
 # A shaded JAR being a module artifact possibly with different version
 read -r -a ALLSHADEDNOVERSION <<< "${allShadedJarsNoVersion}"
+read -r -a TRANSITIVESHADEDNOVERSION <<< "${transitiveShadedJarsNoVersion}"
 read -r -a ALLJARS <<< "${allJars}"
   for i in "${ALLJARS[@]}"; do
       for j in "${ALLSHADEDNOVERSION[@]}"; do
         if [[ "$i" == $j*".jar" ]]; then
-          echo "WARNING: ${modulesMap[$i]} is shaded in:" ${hashmap[$j]}
+          echo "WARNING: ${modulesMap[$i]} is shaded in: ${hashmap[$j]}"
+        fi
+      done
+      for j in "${TRANSITIVESHADEDNOVERSION[@]}"; do
+        echo "TRANSITIVE $j ==> ${transitiveJarMap[$j]}"
+        if [[ "$i" == $j*".jar" ]]; then
+          echo "WARNING: ${modulesMap[$i]} is shaded in a TRANSITIVE dependency:" ${transitiveJarMap[$j]}
         fi
       done
   done

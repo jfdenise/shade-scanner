@@ -1,6 +1,9 @@
 #!/bin/sh
 
 declare -A transitiveMap
+declare -A transitiveJarMap
+transitiveShadedJarsNoVersion=
+
 function scanTransitive() {
   local depGroupId="${1}"
   local depArtifactId="${2}"
@@ -38,8 +41,10 @@ function scanTransitive() {
         local transitivex=$(dirname $transitivex)
         local transitiveartifactId=$(basename $transitivex)
         if [[ "$downloadedJarFileName" != "$transitiveartifactId-"* ]]; then
+          transitiveShadedJarsNoVersion="$transitiveShadedJarsNoVersion $transitiveartifactId-"
           transitivex=${transitivex////:}
           transitivearray+=("$transitivex:$transitiveversion")
+          transitiveJarMap["$transitiveartifactId-"]="$transitivegroupId:$transitiveartifactId:$transitiveversion"
           local transitiveString="$transitiveString $transitivex:$transitiveversion"
           echo "WARNING: Found transitive $transitivex:$transitiveversion in $depGroupId:$depArtifactId:$depVersion"
           scanTransitive $transitivegroupId $transitiveartifactId $transitiveversion
