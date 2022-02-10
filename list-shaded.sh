@@ -32,6 +32,7 @@ for i in "${ARR[@]}"; do
      len=${#pomsArray[@]}
      if [ "$len" != "1" ]; then
       echo "$i shades " $(($len - 1)) " artifacts"
+      array=()
       for p in "${pomsArray[@]}"; do
         p=$(echo $p|tr -d '\n')
         dir=$(dirname $p)
@@ -44,9 +45,11 @@ for i in "${ARR[@]}"; do
           allShadedJarsNoVersion="$allShadedJarsNoVersion $artifactId-"
           x=${x////:}
           hashmap["$artifactId-"]="$i[$x:$version]"
-          echo "   $x:$version"
+          array+=("$x:$version")
         fi
       done
+      sorted=($(for a in "${array[@]}"; do echo "$a"; done | sort))
+      for dep in "${sorted[@]}"; do echo "  $dep"; done
      fi
    else
      notMaven="$notMaven$i"
