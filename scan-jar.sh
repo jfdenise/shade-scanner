@@ -39,7 +39,9 @@ if [ -d "shade-scanner-output/${jarFileName}/META-INF/maven" ]; then
     dir=$(dirname $p)
     props=$dir/pom.properties
     version=`cat $props | grep "version" | cut -d'=' -f2`
+    version=$(echo $version|tr -dc '[:print:]')
     groupId=`cat $props | grep "groupId" | cut -d'=' -f2`
+    groupId=$(echo $groupId|tr -dc '[:print:]')
     x="${p#*shade-scanner-output/${jarFileName}/META-INF/maven/}"
     x=$(dirname $x)
     artifactId=$(basename $x)

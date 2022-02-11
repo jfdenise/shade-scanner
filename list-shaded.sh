@@ -25,6 +25,8 @@ mkdir -p shade-scanner-output
 echo "Scanned JARS are unzipped in shade-scanner-output directory."
 FILES=$(find ${jbossHome}/modules/ -name \*.jar)
 readarray ARR <<< "${FILES}"
+numShaded=0
+unknown=0
 notMaven=
 allJars=
 allShadedJarsNoVersion=
@@ -43,13 +45,16 @@ for i in "${ARR[@]}"; do
      readarray pomsArray <<< "${pomFiles}"
      len=${#pomsArray[@]}
      if [ "$len" != "1" ]; then
+      numShaded=$((numShaded+1))
       array=()
       for p in "${pomsArray[@]}"; do
         p=$(echo $p|tr -d '\n')
         dir=$(dirname $p)
         props=$dir/pom.properties
         version=`cat $props | grep "version" | cut -d'=' -f2`
+        version=$(echo $version|tr -dc '[:print:]')
         groupId=`cat $props | grep "groupId" | cut -d'=' -f2`
+        groupId=$(echo $groupId|tr -dc '[:print:]')
         x="${p#*shade-scanner-output/${jarFileName}/META-INF/maven/}"
         x=$(dirname $x)
         artifactId=$(basename $x)
@@ -68,25 +73,29 @@ for i in "${ARR[@]}"; do
       for dep in "${sorted[@]}"; do echo "  $dep"; done
      fi
    else
-     notMaven="$notMaven$i"
+     unknownJar="${i#*modules/system/layers/base/}"
+     notMaven="$notMaven$unknownJar"
+     unknown=$((unknown+1))
    fi
  fi
 done
 
 # Check for duplicates
 # A shaded JAR being a module artifact possibly with different version
+numDuplicates=0
 read -r -a ALLSHADEDNOVERSION <<< "${allShadedJarsNoVersion}"
 read -r -a TRANSITIVESHADEDNOVERSION <<< "${transitiveShadedJarsNoVersion}"
 read -r -a ALLJARS <<< "${allJars}"
   for i in "${ALLJARS[@]}"; do
       for j in "${ALLSHADEDNOVERSION[@]}"; do
         if [[ "$i" == $j*".jar" ]]; then
+          numDuplicates=$((numDuplicates+1))
           echo "WARNING: ${modulesMap[$i]} is shaded in: ${hashmap[$j]}"
         fi
       done
       for j in "${TRANSITIVESHADEDNOVERSION[@]}"; do
-        echo "TRANSITIVE $j ==> ${transitiveJarMap[$j]}"
         if [[ "$i" == $j*".jar" ]]; then
+          numDuplicates=$((numDuplicates+1))
           echo "WARNING: ${modulesMap[$i]} is shaded in a TRANSITIVE dependency:" ${transitiveJarMap[$j]}
         fi
       done
@@ -94,3 +103,11 @@ read -r -a ALLJARS <<< "${allJars}"
 
 printTransitives
 
+echo "Cant identify shading state for the following jars:"
+echo "$notMaven"
+echo " "
+echo "Scanning DONE."
+echo "* ${#ARR[@]} jars in modules"
+echo "* ${numShaded} shaded jars"
+echo "* ${numDuplicates} duplicates"
+echo "* ${unknown} can't determinate"
