@@ -26,8 +26,6 @@ echo "Scanned JARS are unzipped in shade-scanner-output directory."
 FILES=$(find ${jbossHome}/modules/ -name \*.jar)
 readarray ARR <<< "${FILES}"
 numShaded=0
-unknown=0
-notMaven=
 allJars=
 allShadedJarsNoVersion=
 declare -A hashmap
@@ -71,11 +69,11 @@ for i in "${ARR[@]}"; do
       echo "$i shades " $(($len - 1)) " artifacts"
       sorted=($(for a in "${array[@]}"; do echo "$a"; done | sort))
       for dep in "${sorted[@]}"; do echo "  $dep"; done
+     else
+       checkSuspicious "${pomsArray[0]}"
      fi
    else
-     unknownJar="${i#*modules/system/layers/base/}"
-     notMaven="$notMaven$unknownJar"
-     unknown=$((unknown+1))
+     handleNotMaven "${i}"
    fi
  fi
 done
@@ -83,6 +81,8 @@ done
 # Check for duplicates
 # A shaded JAR being a module artifact possibly with different version
 numDuplicates=0
+echo " "
+echo "DUPLICATES (known shaded dependency)"
 read -r -a ALLSHADEDNOVERSION <<< "${allShadedJarsNoVersion}"
 read -r -a TRANSITIVESHADEDNOVERSION <<< "${transitiveShadedJarsNoVersion}"
 read -r -a ALLJARS <<< "${allJars}"
@@ -101,13 +101,19 @@ read -r -a ALLJARS <<< "${allJars}"
       done
   done
 
+if [ "$numDuplicates" == "0" ]; then
+  echo "NONE"
+fi
+
 printTransitives
 
-echo "Cant identify shading state for the following jars:"
-echo "$notMaven"
-echo " "
-echo "Scanning DONE."
+printSuspicious
+
+printNotMaven
+
+echo "SCANNING DONE."
 echo "* ${#ARR[@]} jars in modules"
 echo "* ${numShaded} shaded jars"
 echo "* ${numDuplicates} duplicates"
 echo "* ${unknown} can't determinate"
+echo "* ${suspiciousLen} are suspicious, check pom.xml files"

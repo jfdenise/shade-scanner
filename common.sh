@@ -4,6 +4,10 @@ declare -A transitiveMap
 declare -A transitiveJarMap
 transitiveShadedJarsNoVersion=
 errorDependencies=
+suspicious=
+suspiciousLen=0
+unknown=0
+notMaven=
 function scanTransitive() {
   local depGroupId="${1}"
   local depArtifactId="${2}"
@@ -50,13 +54,32 @@ function scanTransitive() {
           transitivearray+=("$transitivex:$transitiveversion")
           transitiveJarMap["$transitiveartifactId-"]="$transitivegroupId:$transitiveartifactId:$transitiveversion"
           local transitiveString="$transitiveString $transitivex:$transitiveversion"
-          echo "WARNING: Found transitive $transitivex:$transitiveversion in $depGroupId:$depArtifactId:$depVersion"
+          #echo "WARNING: Found transitive $transitivex:$transitiveversion in $depGroupId:$depArtifactId:$depVersion"
           scanTransitive $transitivegroupId $transitiveartifactId $transitiveversion "$mavenRepos"
        fi
      done
      transitiveMap["$depGroupId:$depArtifactId:$depVersion"]=$transitiveString
+   else
+      checkSuspicious "${transitivePomsArray[0]}"
    fi
-fi
+  else
+    handleNotMaven ${downloadedJar}
+  fi
+}
+
+function handleNotMaven() {
+  unknownJar="${1#*modules/system/layers/base/}"
+  notMaven="$notMaven$unknownJar"
+  unknown=$((unknown+1))
+}
+
+function printNotMaven() {
+  if [ "${unknown}" != 0 ]; then
+    echo " " 
+    echo "NO MAVEN METADATA"
+    echo "$notMaven"
+    echo " "
+  fi
 }
 
 function printTransitives() {
@@ -88,4 +111,24 @@ if [ -n "$errorDependencies" ]; then
       echo "  $e"
   done
 fi
+}
+
+function checkSuspicious() {
+  local pomFile=$(echo ${1}|tr -d '\n')
+  if [[ $(grep maven-shade-plugin "${pomFile}") ]] || [[ $(grep jar-with-dependencies "${pomFile}") ]] || [[ $(grep unpack-dependencies "${pomFile}") ]]; then
+      suspicious="${suspicious} ${pomFile}"
+  fi
+}
+
+function printSuspicious() {
+  if [ -n "${suspicious}" ]; then
+    read -r -a suspiciousArray <<< "${suspicious}"
+    suspiciousLen=${#suspiciousArray[@]}
+    echo " " 
+    echo "SUSPICIOUS JARS"
+    echo "${suspiciousLen} could be hidden shaded jars"
+    for s in "${suspiciousArray[@]}"; do 
+      echo "  $s"
+    done
+  fi
 }

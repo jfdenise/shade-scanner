@@ -62,8 +62,12 @@ if [ -d "shade-scanner-output/${jarFileName}/META-INF/maven" ]; then
     echo "  $dep";
   done
   printTransitives
+ else
+   checkSuspicious "${pomsArray[0]}"
  fi
 else
  echo "The jar $jarFileName doesn't contain Maven metadata, can't identify shaded dependencies."
 fi
 
+printSuspicious
+printNotMaven
